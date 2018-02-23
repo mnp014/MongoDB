@@ -1,0 +1,430 @@
+Cluster setup
+shards             -4
+replication factor -3
+
+mongos             -4    4x3=12 mongod
+config servers     -3
+
+
+CLIENT->MONGOS->MONGOD
+
+***********************************
+a,b,c shards
+1,2,3 servers
+-------------------------------
+mkdir a1             //machine a1
+mkdir a2             //machine a2
+mkdir a3             //machine a3 
+
+mkdir b1              //machine b
+mkdir b2
+mkdir b3             
+
+mkdir c1             //machine c
+mkdir c2
+mkdir c3
+
+mkdir d1             //machine d
+mkdir d2
+mkdir d3
+
+
+mkdir cfg1             //machine cfg1
+mkdir cfg2             //machine cfg2
+mkdir cfg3             //machine cfg3
+__________________________________________________________________ 
+start servers
+--------------------------------------
+
+config servers:
+
+
+mongod --configsvr --dbpath <cfg1> --port <30011> --fork --logpath <log.cfg1> --logappend 
+mongod --configsvr --dbpath <cfg2> --port <30012> --fork --logpath <log.cfg2> --logappend 
+mongod --configsvr --dbpath <cfg3> --port <30013> --fork --logpath <log.cfg3> --logappend
+
+--------------------------------------------------------------------------------------------
+shard server           [note: small files used for demo purpose , dont include it in production ]
+[recommender: 1 shardsvr per machine]
+
+//machine a
+mongod --shardsvr --replSet <a> --dbpath <a1> --logpath <log.a1> --port <37001> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <a> --dbpath <a2> --logpath <log.a2> --port <37002> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <a> --dbpath <a3> --logpath <log.a3> --port <37003> --fork --logappend --smallfiles --oplogSize <50> 
+
+//machine b
+mongod --shardsvr --replSet <b> --dbpath <b1> --logpath <log.b1> --port <37001> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <b> --dbpath <b2> --logpath <log.b2> --port <37002> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <b> --dbpath <b3> --logpath <log.b3> --port <37003> --fork --logappend --smallfiles --oplogSize <50> 
+
+//machine c
+mongod --shardsvr --replSet <c> --dbpath <c1> --logpath <log.c1> --port <37001> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <c> --dbpath <c2> --logpath <log.c2> --port <37002> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <c> --dbpath <c3> --logpath <log.c3> --port <37003> --fork --logappend --smallfiles --oplogSize <50> 
+
+
+//machine d
+mongod --shardsvr --replSet <d> --dbpath <d1> --logpath <log.d1> --port <37001> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <d> --dbpath <d2> --logpath <log.d2> --port <37002> --fork --logappend --smallfiles --oplogSize <50> 
+mongod --shardsvr --replSet <d> --dbpath <d3> --logpath <log.d3> --port <37003> --fork --logappend --smallfiles --oplogSize <50> 
+
+__________________________________________________ 
+
+Mongos process (Router):    [followin are for 4 servers , can be done with just one ]
+[Note: best practice to use logical names for each config server, such as "config1","config2","config3",etc instead of  <10gen.config_svr2_ip:30012>
+*************************following creates "mongos" and maps all "config" servers to it*****************************
+---------------------------------------------------------
+mongos --configdb 10gen.<config_svr1_ip:30011>, <10gen.config_svr2_ip:30012>, <10gen.config_svr3_ip:30013> --fork --logappend --logpath <log.mongos1>                  //no port specified '.' default mongodb port: 27017
+mongos --configdb 10gen.<config_svr1_ip:30011>, <10gen.config_svr2_ip:30012>, <10gen.config_svr3_ip:30013> --fork --logappend --logpath <log.mongos2> --port <40012>
+mongos --configdb 10gen.<config_svr1_ip:30011>, <10gen.config_svr2_ip:30012>, <10gen.config_svr3_ip:30013> --fork --logappend --logpath <log.mongos3> --port <40013>
+mongos --configdb 10gen.<config_svr1_ip:30011>, <10gen.config_svr2_ip:30012>, <10gen.config_svr3_ip:30013> --fork --logappend --logpath <log.mongos4> --port <40013>
+_____________________________________________________________________________
+
+[BEST PRACTICE:
+#1 run "mongos"(router) on standard mongodb TCP port i.e. 27017. 
+#2 Do-Not run "shard server","Config server" on standard mongodb TCP port i.e. 27017.
+
+_____________________________________________________________________________    
+to see whats running
+-----------------------------
+ps -A |grep mongo
+
+tail -n l log.cfg0
+tail -n l log.cfg1
+tail -n l log.cfg2
+
+tail -n l log.a1
+tail -n l log.a2
+tail -n l log.a3
+
+
+tail -n l log.b1
+tail -n l log.b2
+tail -n l log.b3
+
+
+tail -n l log.c1
+tail -n l log.c2
+tail -n l log.c3
+
+
+tail -n l log.d1
+tail -n l log.d2
+tail -n l log.d3
+
+tail -n l log.mongos1
+tail -n l log.mongos2
+tail -n l log.mongos3
+_______________________________________________________________________
+***********************************************************************
+If gonna run all the above in a single machine
+>cd <mucluster>
+mycluster>ls -la <run>.sh
+mycluster> <vi/emacs> <run>.sh
+
+>put all the above in a shell script "<run>.sh"
+>check for port conflicts among the servers used in the script
+>save it
+>  $ chmod +x <run>.sh
+> run script using $ ./<run>.sh
+
+
+[NOTE : one of the mongos will lock the "Balancer" which distibutes data among the Shards]
+***********************************************************************
+[NOTE : "replica-set" are not yet initiated]
+***********************************************************************
+>ps -A | grep mongo
+>mongo                   //connects to mongos
+>rs.status()             //check status of replica-set
+____________________________________________________________
+//view what's in Config DB intitially
+------------------------------------------------------
+mongos> use config         //look at config db in config server
+mongos> db                 //displays db in current server
+mongos> show collections   //mongos might have created these collections for us[chunks,databases,lockpings,locks,mongos,settings,shards,system.indexes,version]
+mongos> db.chunk.find()    //
+mongos> db.database.find()  //{"_id":"admin", "partitioned" :false, "primary" : "config"} admin mainly for security purposes
+mongos> db.shards.find()    // not created yet
+_________________________________________________________________
+*****************************************************************************
+Now we have all the servers....
+ >ps -A | grep mongo | less
+
+Now we need to connect everything to one logical system
+  i.e.  for each shard:
+		1) Initiate the replica set,   that represents they are shard
+		2) Add the shard [mongos>sh.addShard(...)
+---------------------------------------------------------------------------------
+// if replica-set-a1-port == 37001 from above
+>ps -A | grep mongod | grep <37001>  // lists process in a1(37001),a2,a3
+
+------------------------------------------------------------------------------
+				Initiating the replica set               (telling RS what are the config files available) 
+------------------------------------------------------------------------------
+
+#step1
+	// connect to first mogod's initiate replica set 
+	>mongo --port <37001> // connect to replica-set a1
+
+#step2
+	>rs.status()          // displays no RS initiate		 ["ok" : 0]
+	>rs.initiate()        //To intiate RS & get success msg 	 ["ok" : 1]
+	>rs.status()          // displays created RS info	 	 ["ok" : 1]
+		a1:PRIMARY>rs.add( 10gen.<config_svr1_ip:30011> )	// ["ok" : 1]
+		a1:PRIMARY>rs.add( 10gen.<config_svr2_ip:30012> )	// ["ok" : 1]
+		a1:PRIMARY>rs.add( 10gen.<config_svr3_ip:30013> )	// ["ok" : 1]
+#step2 :test using config server
+		a1:PRIMARY>rs.conf()    // must display all 3 added members i.e. :
+							"host": 10gen.<config_svr1_ip:30011>
+							"host": 10gen.<config_svr1_ip:30012>
+							"host": 10gen.<config_svr1_ip:30013>
+#step3  :RS is not added as an shard yet!! ,
+	 Before adding as an shard into this cluster wait for initialization to be completed
+	 check initialization status using "rs.status() -> ("stateStr" : {"RECOVERING"-->"PRIMARY|SECONDARY"} )
+		a1:PRIMARY>rs.status()            //value must be [ "stateStr" : "PRIMARY|SECONDARY" ]
+#step4
+		a1:PRIMARY> ^C          // disconnect from replica set
+------------------------------------------------------------------------------
+				Adding the shard
+------------------------------------------------------------------------------
+
+#step5  :connect to any one of mongos [NOTE: use port if specified <40012>,<40013>]
+	>mongos                        // connected to mongos with default port 27017
+	
+		mongos> sh.help()      // help on sharding. lists all sharding options
+#step6  :add shard
+		Syntax:        mongos> sh.addShard("<set name> / <atleast-one-hostname>" )
+		mongos> sh.addShard( "a/10gen.<config_svr1_ip:30011>"              ["shardAdded" : "a", "ok" : 1]
+
+#step7  :test added shard
+		mongos> sh.status()		           [.....shards: { "_id' : "a" ,
+									   "host " :10gen.<config_svr1_ip:30011,
+										    10gen.<config_svr1_ip:30012,
+										    10gen.<config_svr1_ip:30013, ....]	
+#step8 :Similarly add other shards
+	can be done manually!! recommended to use script [example: mongo_setup.js]
+
+		mongos> ^C
+------------------------------------------------------------------------------------------------------
+//writing script "mongo_setup.js"
+
+> <vi/emacs> <mongo_setup>.js
+--------------------------------------------------------------------------------------------------
+				mongo_setup.js
+--------------------------------------------------------------------------------------------------
+db= db.getSisterDB("config");
+var mongoConn = db;          //assuming we connected to a mongos
+
+var res = null;
+
+function check(){
+	printjson(res);
+	if( !res || !res.ok) {
+		throw "check(): not ok ,stopping";
+	}
+}
+
+function waitForSethealthy(){
+	print("waiting for replica-set initiate to complete...");
+	while(1){
+		sleep(250);
+		var res =rs.status();
+		if( !res.ok )
+			continue;
+		var bad = false;
+		for( var i=0; i< res.members.length; i++) {
+			var state =res.members[i].state;
+			if( state != 1 && state !=2 )             // PRIMARY or SECONDARY 
+				bad=true;
+		}
+		if( !bad )
+			break;
+	}
+}
+
+function ourAddShard(setname, port) {
+	db = connect("localhost:"+port+"/test");
+	print(db.isMaster().me);
+	res = rs.initiate(
+		{
+		"_id":setname,
+
+	//***************NOTE : replace <config_svr1_ip> with IP of config servers**************************
+	
+		"members" : [
+			{ _id:0, host:"10gen.<config_svr1_ip>"+port},                   // if Default port used
+			{ _id:1, host:"10gen.<config_svr1_ip>"+ 30011},
+			{ _id:2, host:"10gen.<config_svr1_ip>"+ (30011+1) },            // Auto-Increment port, ex: (port+1)
+			{ _id:3, host:"10gen.<config_svr1_ip>"+ (30012+1) }
+			    ]
+		}
+	);
+	check();
+	waitForSethealthy();
+
+	print("adding shard...");
+	db = mongosConn;
+	res = sh.addShard(setname+"/10gen.<config_svr1_ip>"+port);
+	check();
+	print("done ; run sh.status());
+}
+
+print("setup.js loaded.");
+print("list of existing shards initially:");
+printjson( db.shards.find().toArray );
+print()
+print("you can invoke:");
+print("ourAddShard(setname,port)");
+print()
+
+-----------------------------------------------------------------------------------------------------------------------------------
+// Create a shard using available machines (above created shard machines) and map to all available config servers.  
+// following is a mongo cluster with 4 shards, each containing of replica set with 3 members.
+
+>mongo --shell <mongo_setup>.js
+	you can invoke:                                    // prompt from js
+	OurAddShard(setname,port)                          // prompt from js
+	
+	mongos>ourAddShard("a",27100)                       // Replace constant(300XX) in js with port
+	mongos>sh.status()
+
+	mongos>ourAddShard("b",27100)                       // Replace constant(300XX) in js with port
+	mongos>sh.status()
+ 
+	mongos>ourAddShard("c",27100)                       // Replace constant(300XX) in js with port
+	mongos>sh.status()
+
+	mongos>ourAddShard("d",27100)                       // Replace constant(300XX) in js with port
+	mongos>sh.status()
+
+
+
+test: 
+	mongos> use config
+	mongos> show collectons
+	mongos> db.shards.find()                          // lists all 4 shards
+							{"_id" , "host": "rs-1" , "rs-a2", "rs-a3 }
+
+---------------------------------------------------------------------------------------------------------------------------------
+***************************************************************************************************************************
+			Now the cluster is up!!
+ 			But, how you shard a collection on a db?
+***************************************************************************************************************************
+specifying shard key:
+
+	mongos> sh.help()
+------------------------------------------------------------------------------------------------------------------------------------
+//sharding db:
+	mongos> db                                 //say employeedb
+	mongos> sh.enableSharding(employeedb)      [ { "ok" : 1} ]
+	mongos> sh.ebableSharding(employeedb)      [ { "ok" : 0, "error" : "already enabled" } ]
+	mongos> sh.status()
+		[...shards:{...}
+		    databases:
+			...
+			...
+			{ "_id" : " employeedb" "partitioned" : true, " primary" : "a"} 
+			...   ]
+	mongos> 
+------------------------------------------------------------------------------------------------------------------------------------
+//sharding collection
+	mongos> sh.enableSharding("employeedb.foo", {_id:1}, true)
+		where:
+			{_id:1}		Shard key
+			_id		partition key for this collection
+			true		Unique or not
+
+	mongos> sh.status()
+		[...shards:{...}
+		    databases:
+			...
+			...
+			{ "_id" : " employeedb" "partitioned" : true, " primary" : "a"}
+					employeedb.foo chunks:
+							a                     // shard name
+							{"_id" : { $minKey : 1}} -->> {"_id" : { $maxKey : 1}} on .... Timestamp]
+	
+------------------------------------------------------------------------------------------------------------------------------------
+***************************************************************************************************************************
+					working with sharded collections
+***************************************************************************************************************************
+	mongos> 
+	mongos> 	for( var i=0; i< 20000; i++) { t.insert({x:i,y:3,z:"text                                 text"); 
+	mongos>t
+	mongos> t.status()
+
+	mongos>t.insert({X:-1})
+	mongos>t.getLastErrorOBj()
+	mongos>db.getLastErrorOBj()
+
+	mongos>t.find({},{longer:0})
+-------------------------------------------------------------------------------
+//creating new index
+	mongos>t.getIndexes()                           [
+								{
+									"v":1,
+									"key": {
+										"_id" :1
+									},
+									"ns" : "employeedb.foo",
+									"name" : "_id_"
+								}                                     ]
+---------------------------------------------------------------------------------
+lets create index on "x"
+	mongos>t.ensureIndex( { x : 1 } )
+	mongos>t.getLastErrorOBj()                                      ["err" : null, "ok" : 1 ]
+	mongos>t.getIndexes()                           [
+								{
+									"v":1,
+									"key": {
+										"_id" :1
+									},
+									"ns" : "employeedb.foo",
+									"name" : "_id_"
+								},
+								{
+									"v":1,
+									"key": {
+										"x" :1                             //new index created
+									},
+									"ns" : "employeedb.foo",
+									"name" : "x_l"
+								}                               	]
+  
+ ----------------------------------------------------------------------------------------------------
+	mongos>t.find( {"_id": ObjectId("98****"923")}, { longer:0} )   // pull just one document
+					["_id": ObjectId("98****"923")}, "x" : 12823, "y" :54, "z" :test]
+-------------------------------------------------------------------------------------------------------
+	mongos>t.find( {"_id": ObjectId("98****"923")}, { longer:0} ).explain   //  explain how data was fetched .... which all shrads visited
+-------------------------------------------------------------------------------------------------------
+	mongos>t.find({}, {longer:0)  
+-------------------------------------------------------------------------------------------------------
+	mongos>t.find({x:-1})                                        //-1 indicates index x not used/present   (Shatter/gather)
+-------------------------------------------------------------------------------------------------------
+***************************************************************************************************************************
+				how to pick the right shard key
+***************************************************************************************************************************
+		* Shard key common in all queries. So, that queries can be directed to particular shard.
+			example: <a, b, c>
+				 <q, a, z>            // selecting 'a'  as key recommended
+				 <b, a, d>
+
+		* Has good cardinality/granularity (enough values to spread the collection out across shrads)
+			example: <id,name,company>
+						chunks can split based on company..find all employees from RSA
+
+		* Shard key monotonically increases  (example BSON objects, timestamp: over time if we add timestamp it has greater value)
+			example: < company_name , _id>           -not recommended
+				 < company_name , timestamp>     -recommended
+***************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+ 
