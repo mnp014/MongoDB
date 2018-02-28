@@ -194,7 +194,7 @@ Now we need to connect everything to one logical system
 		mongos> sh.help()      // help on sharding. lists all sharding options
 #step6  :add shard
 		Syntax:        mongos> sh.addShard("<set name> / <atleast-one-hostname>" )
-		mongos> sh.addShard( "a/10gen.<config_svr1_ip:30011>"              ["shardAdded" : "a", "ok" : 1]
+		mongos> sh.addShard( "<a>/<RP_ip:30011>")              ["shardAdded" : "a", "ok" : 1]
 
 #step7  :test added shard
 		mongos> sh.status()		           [.....shards: { "_id' : "a" ,
@@ -252,10 +252,10 @@ function ourAddShard(setname, port) {
 	//***************NOTE : replace <config_svr1_ip> with IP of config servers**************************
 	
 		"members" : [
-			{ _id:0, host:"10gen.<config_svr1_ip>"+port},                   // if Default port used
-			{ _id:1, host:"10gen.<config_svr1_ip>"+ 30011},
-			{ _id:2, host:"10gen.<config_svr1_ip>"+ (30011+1) },            // Auto-Increment port, ex: (port+1)
-			{ _id:3, host:"10gen.<config_svr1_ip>"+ (30012+1) }
+			{ _id:0, host:"10gen.<RP0_ip>"+port},                   // if Default port used
+			{ _id:1, host:"10gen.<RP1_ip>"+ 30011},
+			{ _id:2, host:"10gen.<RP2_ip>"+ (30011+1) },            // Auto-Increment port, ex: (port+1)
+			{ _id:3, host:"10gen.<RP3_ip>"+ (30012+1) }
 			    ]
 		}
 	);
@@ -316,8 +316,8 @@ specifying shard key:
 ------------------------------------------------------------------------------------------------------------------------------------
 //sharding db:
 	mongos> db                                 //say employeedb
-	mongos> sh.enableSharding(employeedb)      [ { "ok" : 1} ]
-	mongos> sh.ebableSharding(employeedb)      [ { "ok" : 0, "error" : "already enabled" } ]
+	mongos> sh.enableSharding("employeedb")      [ { "ok" : 1} ]
+	mongos> sh.ebableSharding("employeedb")      [ { "ok" : 0, "error" : "already enabled" } ]
 	mongos> sh.status()
 		[...shards:{...}
 		    databases:
