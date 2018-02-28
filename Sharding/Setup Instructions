@@ -333,6 +333,17 @@ specifying shard key:
 			{_id:1}		Shard key
 			_id		partition key for this collection
 			true		Unique or not
+			
+----------------------------------------------------------------
+working
+------------------------------------------------------------------------
+			
+			db.runCommand({
+   			 shardCollection: "company.rsa",
+ 			   key:{_id:1},
+			    unique: true    
+ 			   })
+-----------------------------------------------------------------------			   
 
 	mongos> sh.status()
 		[...shards:{...}
