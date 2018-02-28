@@ -335,7 +335,7 @@ specifying shard key:
 			true		Unique or not
 			
 ----------------------------------------------------------------
-working
+working [run against admin in router]
 ------------------------------------------------------------------------
 			
 			db.runCommand({
