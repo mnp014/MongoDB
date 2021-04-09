@@ -58,7 +58,7 @@ or
 ```
 >db.  <CollectionName> .find(  { <field> : { $type: 10 } } )
 ```
-NOTE: `$type: 10` represents the value of the field is of BSON Type Null (type number 10) 
+###### NOTE: `$type: 10` represents the value of the field is of BSON Type Null (type number 10) 
 --------------------------------------------------------------------------------------------------------------------------------
 projection
 ```
