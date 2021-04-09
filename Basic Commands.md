@@ -34,7 +34,32 @@ find data
 ```
 >db.  <CollectionName> .find({})
 ```
-
+search Key exists
+--------------------------------------------------------------------------------------------------------------------------------
+```
+>db.  <CollectionName> .find( { <field> : { $exists: <boolean> } })
+```
+search value exists
+--------------------------------------------------------------------------------------------------------------------------------
+```
+>db.  <CollectionName> .find( { <field> : { $in: [ <value 1>, ... , <value n> ] } } )
+```
+search value not exists
+--------------------------------------------------------------------------------------------------------------------------------
+```
+>db.  <CollectionName> .find( { <field> : { $nin: [ <value 1>, ... , <value n> ] } } )
+```
+search Null or Missing Fields
+--------------------------------------------------------------------------------------------------------------------------------
+```
+>db.  <CollectionName> .find( { <field> : null } )
+```
+or 
+```
+>db.  <CollectionName> .find(  { <field> : { $type: 10 } } )
+```
+NOTE: `$type: 10` represents the value of the field is of BSON Type Null (type number 10) 
+--------------------------------------------------------------------------------------------------------------------------------
 projection
 ```
 >db.  <CollectionName> .find({}, {_id: 0, field1: 1, field2: 1})
